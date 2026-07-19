@@ -1,0 +1,659 @@
+/* =========================================================
+   コタツ — Playlist
+   다크 / 앨범커버 블러 / 유리(frosted) 재질
+   상단 슬림 플레이어 바 · 유리 방명록 모달 · 카드 접기 · 관리자 UI
+   색·타이포는 :root 토큰으로 일원화 (settings에서 일부 덮어쓰기 가능)
+   ========================================================= */
+
+:root {
+  --bg: #0b0b0d;
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-2: rgba(255, 255, 255, 0.09);
+  --panel: #1b1b1d;
+  --panel-2: #232326;
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.20);
+  --text: #f4f4f5;
+  --text-dim: #a8a8ad;
+  --text-faint: #6f6f76;
+
+  /* 시그니처 그린 — 원본 말풍선 색. settings.accent_color로 덮어쓸 수 있음 */
+  --accent: #7eb27b;
+  --accent-ink: #0c120c;
+
+  /* 말풍선 색상 — 기본값은 패널/강조색을 그대로 따라감. 관리자 설정에서 좌/우 개별 지정 가능 */
+  --bubble-left-bg: var(--panel);
+  --bubble-left-text: var(--entry-accent, var(--accent));
+  --bubble-right-bg: var(--panel);
+  --bubble-right-text: var(--entry-accent, var(--accent));
+
+  /* ---- 유리 재질 (불투명도 80% + 블러) ---- */
+  --glass: rgba(17, 17, 20, 0.80);
+  --glass-soft: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-blur: 22px;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-xs: 8px;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
+
+  --bar-h: 58px;
+
+  --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, Roboto, "Apple SD Gothic Neo", "Noto Sans KR",
+    "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Malgun Gothic",
+    "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+/* hidden 속성이 어떤 display 규칙에도 지지 않도록 (방명록 X 버튼 버그의 원인) */
+[hidden] { display: none !important; }
+
+html { scroll-behavior: smooth; scrollbar-gutter: stable; }
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  margin: 0;
+  padding: 20px 20px 40px;
+  position: relative;
+  z-index: 1;
+  overflow-x: hidden;
+  min-height: 100vh;
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+/* 상단 플레이어 바가 있는 페이지에서만 위 여백 확보 (admin.html은 해당 없음) */
+body.has-bar { padding-top: calc(var(--bar-h) + 26px); }
+body:has(.player-bar) { padding-top: calc(var(--bar-h) + 26px); }  /* :has 미지원 브라우저는 위 .has-bar 규칙이 담당 */
+body.modal-open { overflow: hidden; }
+
+/* 전역 배경 (settings.bg_image_url → --site-bg 로 주입) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: var(--site-bg);
+  background-size: cover;
+  background-position: center;
+  filter: blur(10px) brightness(0.12);
+  transform: scale(1.05);
+  z-index: -1;
+}
+
+/* ---------- 공통 버튼 ---------- */
+button { font-family: inherit; cursor: pointer; color: var(--text); background: transparent; border: none; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.05s ease;
+}
+.btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.btn-accent { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.btn-accent:hover { filter: brightness(1.08); background: var(--accent); }
+.btn-ghost { background: transparent; }
+.btn-danger { color: #ff8a8a; border-color: rgba(255, 138, 138, 0.3); }
+.btn-danger:hover { background: rgba(255, 138, 138, 0.12); }
+.btn-sm { padding: 6px 11px; font-size: 0.78rem; }
+.btn:disabled, .icon-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+.icon-btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon-btn svg { width: 18px; height: 18px; }
+
+/* ---------- 유리 재질 공통 ---------- */
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  border: 1px solid var(--glass-border);
+}
+
+/* =========================================================
+   상단 슬림 플레이어 바
+   ========================================================= */
+.player-bar {
+  position: fixed;
+  left: 0; right: 0; top: 0;
+  height: var(--bar-h);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px 0 10px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+}
+
+/* 바 하단에 붙는 얇은 전체폭 진행선 (모바일에서 유일한 진행 표시) */
+.pb-line { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: rgba(255,255,255,0.08); }
+.pb-line span { display: block; height: 100%; width: 0%; background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent); transition: width 0.25s linear; }
+
+/* 현재 곡 */
+.pb-now {
+  display: flex; align-items: center; gap: 10px;
+  min-width: 0; flex: 0 1 260px;
+  padding: 4px 8px 4px 4px; border-radius: 999px;
+  background: transparent; border: 1px solid transparent; text-align: left;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.pb-now:hover { background: var(--glass-soft); border-color: var(--border); }
+.pb-now:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pb-art {
+  position: relative; width: 38px; height: 38px; border-radius: 8px; overflow: hidden;
+  background: var(--panel); flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+.pb-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pb-meta { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pb-title { font-size: 0.82rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+.pb-artist { font-size: 0.7rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+
+/* 재생 중 이퀄라이저 (앨범아트 위) */
+.pb-eq { position: absolute; inset: 0; display: none; align-items: flex-end; justify-content: center; gap: 2px; padding-bottom: 7px; background: rgba(0,0,0,0.45); }
+body.is-playing .pb-eq { display: flex; }
+.pb-eq i { width: 2px; height: 6px; background: var(--accent); border-radius: 1px; animation: eq 0.9s ease-in-out infinite; }
+.pb-eq i:nth-child(2) { animation-delay: 0.15s; }
+.pb-eq i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes eq { 0%,100% { height: 4px; } 50% { height: 14px; } }
+
+/* 트랜스포트 */
+.pb-controls { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.pb-controls .icon-btn { width: 32px; height: 32px; border: none; background: transparent; color: var(--text-dim); }
+.pb-controls .icon-btn:hover { color: var(--text); background: var(--glass-soft); }
+.pb-controls .icon-btn.active { color: var(--accent); }
+.pb-controls .icon-btn svg { width: 16px; height: 16px; }
+.pb-play { width: 36px !important; height: 36px !important; background: var(--accent) !important; color: var(--accent-ink) !important; }
+.pb-play:hover { filter: brightness(1.08); }
+.pb-play svg { width: 17px !important; height: 17px !important; }
+
+.pb-repeat { position: relative; }
+.pb-repeat .rep-one {
+  position: absolute; top: 0; right: 0;
+  font-size: 0.5rem; font-weight: 800; background: var(--accent); color: var(--accent-ink);
+  border-radius: 50%; width: 12px; height: 12px; display: none; align-items: center; justify-content: center; line-height: 1;
+}
+.pb-repeat.one .rep-one { display: flex; }
+
+/* 시크 */
+.pb-seek { display: flex; align-items: center; gap: 9px; flex: 1 1 auto; min-width: 90px; }
+.pb-time { font-size: 0.68rem; color: var(--text-faint); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.pb-progress { flex: 1; height: 4px; background: rgba(255,255,255,0.14); border-radius: 999px; position: relative; cursor: pointer; touch-action: none; }
+.pb-progress::before { content: ""; position: absolute; inset: -8px 0; }
+.pb-progress-fill { position: absolute; inset: 0 auto 0 0; width: 0%; background: var(--accent); border-radius: inherit; }
+.pb-progress::after {
+  content: ""; position: absolute; top: 50%; left: var(--pb-knob, 0%);
+  width: 10px; height: 10px; border-radius: 50%; background: #fff;
+  transform: translate(-50%, -50%) scale(0); transition: transform 0.12s ease;
+}
+.pb-progress:hover::after, .pb-progress.dragging::after { transform: translate(-50%, -50%) scale(1); }
+
+/* 오른쪽 도구 */
+.pb-tools { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.pb-vol { display: flex; align-items: center; gap: 4px; }
+.pb-vol .icon-btn, .pb-tools .icon-btn { width: 32px; height: 32px; border: none; background: transparent; color: var(--text-dim); }
+.pb-vol .icon-btn:hover, .pb-tools .icon-btn:hover { color: var(--text); background: var(--glass-soft); }
+.pb-tools .icon-btn.active { color: var(--accent); }
+.pb-tools .icon-btn svg, .pb-vol .icon-btn svg { width: 16px; height: 16px; }
+.pb-volume { width: 74px; accent-color: var(--accent); cursor: pointer; }
+.pb-div { width: 1px; height: 22px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+.pb-tools .pb-badge { position: relative; }
+.pb-tools .pb-badge::after {
+  content: ""; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--accent); display: none;
+}
+.pb-tools .pb-badge.has-new::after { display: block; }
+
+/* =========================================================
+   재생 목록(큐) 패널 — 바 우측에서 내려옴
+   ========================================================= */
+.queue-panel {
+  position: fixed;
+  top: calc(var(--bar-h) + 8px);
+  right: 12px;
+  width: min(340px, calc(100vw - 24px));
+  max-height: min(60vh, 520px);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform-origin: top right;
+  animation: popIn 0.16s ease;
+}
+@keyframes popIn { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }
+.qp-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-size: 0.82rem; font-weight: 700;
+}
+.qp-head .count { color: var(--text-faint); font-weight: 500; font-size: 0.75rem; }
+.qp-list { overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.qp-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; border-radius: var(--radius-sm); text-align: left;
+  background: transparent; border: none; color: var(--text);
+}
+.qp-item:hover { background: var(--glass-soft); }
+.qp-item.current { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.qp-item.current .qp-title { color: var(--accent); }
+.qp-num { width: 18px; flex-shrink: 0; font-size: 0.7rem; color: var(--text-faint); font-variant-numeric: tabular-nums; text-align: right; }
+.qp-thumb { width: 30px; height: 30px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--panel); }
+.qp-meta { min-width: 0; flex: 1; }
+.qp-title { font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qp-artist { font-size: 0.7rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qp-empty { padding: 24px 14px; text-align: center; color: var(--text-faint); font-size: 0.8rem; line-height: 1.6; white-space: pre-line; }
+
+/* =========================================================
+   헤더
+   ========================================================= */
+.site-header {
+  width: min(92%, 900px);
+  margin: 0 auto 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+}
+.site-id .site-title { font-size: 2rem; font-weight: 800; letter-spacing: -0.01em; margin: 0; line-height: 1.1; }
+.site-id .site-subtitle { margin: 6px 0 0; color: var(--text-dim); font-size: 0.9rem; }
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.header-actions .btn .ico svg { width: 15px; height: 15px; display: block; }
+
+/* ---------- 컨테이너 ---------- */
+.container { width: 80%; max-width: 900px; margin: 0 auto; container-type: inline-size; padding: 4px 0; }
+.empty-state { text-align: center; color: var(--text-dim); padding: 80px 20px; font-size: 0.95rem; line-height: 1.7; white-space: pre-line; }
+
+/* =========================================================
+   곡 카드
+   ========================================================= */
+.song-entry {
+  margin-bottom: 64px;
+  padding: 25px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  scroll-margin-top: calc(var(--bar-h) + 20px);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.song-entry::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--bg-image);
+  background-size: cover;
+  background-position: center;
+  filter: blur(15px) brightness(0.5);
+  transform: scale(1.1);
+  z-index: -1;
+}
+.playlist-container .song-entry:last-of-type { margin-bottom: 0; }
+.song-entry[hidden] { display: none !important; }
+
+/* 현재 곡 강조 (재생/일시정지 공통) */
+.song-entry.is-current {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), var(--shadow-lg);
+}
+.song-entry.is-playing .now-tag { display: inline-flex; }
+.now-tag {
+  display: none; align-items: center; gap: 5px;
+  position: absolute; top: 18px; left: 20px; z-index: 3;
+  padding: 4px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 85%, black);
+  color: var(--accent-ink); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.02em;
+}
+.now-tag i { width: 2px; height: 7px; background: currentColor; border-radius: 1px; animation: eq 0.9s ease-in-out infinite; }
+.now-tag i:nth-child(2) { animation-delay: 0.15s; }
+.now-tag i:nth-child(3) { animation-delay: 0.3s; }
+
+/* 카드 우상단 컨트롤 */
+.entry-controls { position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; z-index: 3; }
+.entry-controls .icon-btn { background: rgba(0, 0, 0, 0.35); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); border-color: rgba(255, 255, 255, 0.18); }
+.entry-controls .play-btn:hover { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.entry-controls .collapse-btn svg { transition: transform 0.25s ease; }
+
+/* 접힌 상태 헤더 */
+.entry-mini { display: none; align-items: center; gap: 14px; padding-right: 92px; cursor: pointer; }
+.entry-mini img { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
+.entry-mini .mini-title { font-weight: 700; font-size: 1.05rem; color: #fff; }
+.entry-mini .mini-artist { font-size: 0.82rem; color: var(--text-dim); margin-top: 2px; }
+
+.song-entry.collapsed { margin-bottom: 16px; padding: 16px 18px; }
+.song-entry.collapsed .entry-mini { display: flex; }
+.song-entry.collapsed .collapse-btn svg { transform: rotate(-90deg); }
+.song-entry.collapsed .now-tag { top: 50%; left: auto; right: 100px; transform: translateY(-50%); }
+
+/* 펼침/접힘 부드러운 모션: 높이를 미리 알 수 없는 가변 콘텐츠라 grid-template-rows 0fr↔1fr 트릭 사용.
+   접힌 뒤에는 visibility도 늦게 숨겨서(transition-delay) 애니메이션이 끝난 뒤에만 포커스/클릭에서 제외됨 */
+.entry-full {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.entry-full-inner { overflow: hidden; min-height: 0; }
+.song-entry.collapsed .entry-full {
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows 0.38s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.38s;
+}
+
+/* ---------- 카드 본문 ---------- */
+/* 우상단 접기 버튼(38px, top:16px)·좌상단 재생중 배지가 앨범 커버와 겹치지 않도록 여유 공간 확보 */
+.card-body { display: flex; gap: 30px; margin-top: 40px; }
+.left-column { flex: 1; display: flex; flex-direction: column; gap: 15px; min-width: 0; }
+
+/* 원본 디자인 요소: 커버 밑 얇은 유튜브 스트립 (컨트롤바만 살짝 보이는 클리핑).
+   상단 바가 실제 재생을 담당하므로 여기는 순수 장식 — 클릭/포커스 불가 */
+.youtube-player {
+  width: 100%;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  position: relative;
+  pointer-events: none;
+}
+.youtube-player iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.album-cover { position: relative; border-radius: var(--radius-sm); overflow: hidden; }
+.album-cover img { width: 100%; height: auto; display: block; border-radius: var(--radius-sm); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+/* 커버 위 재생 버튼 */
+.cover-play {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.35); opacity: 0; transition: opacity 0.2s ease; border: none; cursor: pointer;
+}
+.album-cover:hover .cover-play, .cover-play:focus-visible { opacity: 1; }
+.cover-play span {
+  width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);
+}
+.cover-play svg { width: 22px; height: 22px; margin-left: 2px; }
+
+.song-title { text-align: center; padding: 10px; border-radius: var(--radius-xs); }
+.song-title .title { font-size: 1.5rem; font-weight: 700; margin: 0; color: #fff; }
+.song-title .artist { font-size: 0.9rem; color: #e0e0e0; margin: 5px 0 0; }
+
+.right-column { flex: 1; min-width: 0; }
+.lyrics {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  height: 540px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.85;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+}
+.lyrics mark { background: color-mix(in srgb, var(--accent) 35%, transparent); color: #fff; border-radius: 3px; padding: 0 2px; }
+
+.quote {
+  margin-top: 25px; padding-top: 25px;
+  border-top: 1px solid var(--border-strong);
+  text-align: center; font-style: italic; font-weight: 700; color: #f5f5f5; white-space: pre-wrap;
+}
+
+.bubble-container { margin-top: 25px; display: flex; flex-direction: column; gap: 10px; }
+.bubble {
+  max-width: 80%;
+  padding: 10px 15px;
+  border-radius: 12px;
+  line-height: 1.6;
+  width: fit-content;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+.bubble-left { align-self: flex-start; border-bottom-left-radius: 2px; background-color: var(--bubble-left-bg); color: var(--bubble-left-text); }
+.bubble-right { align-self: flex-end; border-bottom-right-radius: 2px; background-color: var(--bubble-right-bg); color: var(--bubble-right-text); }
+
+.trivia { opacity: 0.4; margin-top: 25px; text-align: center; font-style: italic; color: #fff; font-size: 0.7rem; white-space: pre-wrap; }
+
+/* 스크롤바 */
+.lyrics::-webkit-scrollbar, .gb-list::-webkit-scrollbar, .qp-list::-webkit-scrollbar, .modal::-webkit-scrollbar { width: 8px; }
+.lyrics::-webkit-scrollbar-track, .gb-list::-webkit-scrollbar-track, .qp-list::-webkit-scrollbar-track { background-color: rgba(255,255,255,0.06); border-radius: 4px; }
+.lyrics::-webkit-scrollbar-thumb, .gb-list::-webkit-scrollbar-thumb, .qp-list::-webkit-scrollbar-thumb { background-color: rgba(255,255,255,0.28); border-radius: 4px; }
+.lyrics::-webkit-scrollbar-thumb:hover, .gb-list::-webkit-scrollbar-thumb:hover { background-color: rgba(255,255,255,0.5); }
+
+/* =========================================================
+   방명록 모달 (유리)
+   ========================================================= */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes riseIn { from { opacity: 0; transform: translateY(12px) scale(0.985); } to { opacity: 1; transform: none; } }
+
+.modal {
+  width: min(560px, 100%);
+  max-height: min(82vh, 760px);
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: riseIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px 14px; border-bottom: 1px solid var(--border);
+}
+.modal-head h3 { margin: 0; font-size: 1.05rem; letter-spacing: -0.01em; }
+.modal-head .count { color: var(--text-faint); font-size: 0.78rem; margin-left: 8px; font-weight: 500; }
+
+.gb-list {
+  flex: 1; overflow-y: auto; padding: 14px 18px;
+  display: flex; flex-direction: column; gap: 10px; min-height: 140px;
+}
+.gb-entry {
+  background: var(--glass-soft);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 11px 13px;
+}
+.gb-entry.fresh { animation: riseIn 0.28s ease; }
+.gb-entry .gb-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
+.gb-entry .gb-name { font-weight: 700; font-size: 0.86rem; color: var(--accent); }
+.gb-entry .gb-time { font-size: 0.7rem; color: var(--text-faint); flex-shrink: 0; }
+.gb-entry .gb-msg { font-size: 0.85rem; color: var(--text); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.gb-entry .gb-foot { display: flex; justify-content: flex-end; margin-top: 9px; }
+.gb-empty { color: var(--text-faint); text-align: center; padding: 36px 0; font-size: 0.85rem; line-height: 1.7; white-space: pre-line; }
+
+.gb-form { padding: 14px 18px 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 9px; background: rgba(255,255,255,0.02); }
+.gb-form-row { display: flex; gap: 9px; }
+.gb-form textarea { min-height: 56px; }
+.gb-form-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.gb-counter { font-size: 0.7rem; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.gb-counter.over { color: #ff8a8a; }
+
+/* ---------- 폼 입력 공통 ---------- */
+input[type="text"], input[type="email"], input[type="password"], input[type="url"], input[type="search"], textarea, select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 10px 12px;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); background: var(--surface-2); }
+textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
+select { appearance: none; cursor: pointer; }
+label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 600; }
+::placeholder { color: var(--text-faint); }
+
+/* =========================================================
+   YouTube 호스트
+   ========================================================= */
+.yt-host {
+  position: fixed; left: -10000px; top: 0; width: 320px; height: 180px; z-index: 70;
+  border-radius: 12px; overflow: hidden; pointer-events: none;
+}
+body.show-video .yt-host {
+  left: auto; right: 16px; bottom: 16px;
+  box-shadow: var(--shadow-lg); border: 1px solid var(--border-strong); pointer-events: auto;
+}
+.yt-host iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+/* =========================================================
+   관리자 (admin.html)
+   ========================================================= */
+.admin-wrap { width: min(92%, 880px); margin: 0 auto; padding: 36px 0 80px; }
+.admin-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+.admin-top h1 { margin: 0; font-size: 1.5rem; }
+.admin-top .who { color: var(--text-dim); font-size: 0.82rem; }
+
+.login-card {
+  width: min(400px, 100%); margin: 12vh auto 0;
+  background: #141416; border: 1px solid var(--border-strong); border-radius: var(--radius);
+  padding: 32px; box-shadow: var(--shadow-lg);
+}
+.login-card h1 { margin: 0 0 4px; font-size: 1.6rem; }
+.login-card p { margin: 0 0 24px; color: var(--text-dim); font-size: 0.85rem; }
+.login-card .field { margin-bottom: 14px; }
+.login-card .btn-accent { width: 100%; justify-content: center; margin-top: 8px; padding: 12px; }
+.login-error { color: #ff8a8a; font-size: 0.82rem; margin-top: 12px; min-height: 1.2em; text-align: center; }
+
+.admin-section { background: #141416; border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin-bottom: 22px; }
+.admin-section > h2 { margin: 0 0 4px; font-size: 1.1rem; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.admin-section > .hint { margin: 0 0 18px; color: var(--text-faint); font-size: 0.8rem; }
+
+.field { margin-bottom: 14px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.color-field { display: flex; gap: 10px; align-items: center; }
+.color-field input[type="color"] { width: 44px; height: 38px; padding: 2px; border-radius: var(--radius-xs); background: var(--surface); border: 1px solid var(--border); cursor: pointer; }
+
+.admin-song { display: flex; align-items: center; gap: 14px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); margin-bottom: 10px; }
+.admin-song img { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--panel); }
+.admin-song .as-meta { flex: 1; min-width: 0; }
+.admin-song .as-title { font-weight: 700; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-song .as-artist { font-size: 0.78rem; color: var(--text-dim); }
+.admin-song .as-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.admin-song .order-btns { display: flex; flex-direction: column; gap: 2px; }
+.admin-song .order-btns button { width: 26px; height: 22px; font-size: 0.7rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); }
+.admin-song .order-btns button:hover { background: var(--surface-2); }
+
+.bubble-editor { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.bubble-row { display: grid; grid-template-columns: 130px 1fr auto; gap: 10px; align-items: start; }
+.bubble-row select { height: 100%; }
+.bubble-row .b-remove { align-self: stretch; }
+.form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--accent); color: var(--accent-ink); padding: 12px 22px; border-radius: 999px;
+  font-weight: 700; font-size: 0.85rem; box-shadow: var(--shadow-lg); z-index: 200;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+.toast.err { background: #ff8a8a; }
+
+.setup-banner {
+  width: min(92%, 900px); margin: 0 auto 24px;
+  background: rgba(255, 196, 0, 0.1); border: 1px solid rgba(255, 196, 0, 0.35);
+  color: #ffd970; border-radius: var(--radius-sm); padding: 16px 18px; font-size: 0.85rem; line-height: 1.6;
+}
+.setup-banner code { background: rgba(0,0,0,0.4); padding: 1px 6px; border-radius: 4px; font-size: 0.85em; }
+
+.hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* 데모(미리보기) 배지 */
+.demo-badge {
+  position: fixed; left: 14px; bottom: 14px; z-index: 60;
+  background: var(--glass); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border); border-radius: 999px;
+  padding: 8px 14px; font-size: 0.72rem; color: var(--text-dim); box-shadow: var(--shadow);
+}
+.demo-badge b { color: var(--accent); }
+
+/* =========================================================
+   반응형
+   ========================================================= */
+@media (max-width: 900px) {
+  .pb-seek { display: none; }
+}
+@media (max-width: 768px) {
+  .container { width: 95%; }
+  .card-body { flex-direction: column; }
+  .lyrics { height: 360px; }
+  .site-header { width: 95%; }
+  .song-entry { padding: 20px 16px; margin-bottom: 40px; }
+
+  .player-bar { gap: 6px; padding: 0 6px; }
+  .pb-now { flex: 1 1 auto; }
+  .pb-controls .pb-shuffle, .pb-controls .pb-repeat { display: none; }
+  .pb-vol, .pb-video, .pb-div { display: none; }
+  .header-actions { width: 100%; }
+}
+@media (max-width: 420px) {
+  .pb-artist { display: none; }
+  .queue-panel { right: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+}

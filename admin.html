@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>コタツ — 관리자</title>
+  <meta name="theme-color" content="#0b0b0d" />
+  <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- =========================================================
+       로그인 화면
+       ========================================================= -->
+  <div id="loginView">
+    <div class="login-card">
+      <h1>コタツ 관리자</h1>
+      <p>등록된 관리자 계정으로 로그인하세요.</p>
+      <form id="loginForm">
+        <div class="field">
+          <label for="liEmail">이메일</label>
+          <input type="email" id="liEmail" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="liPw">비밀번호</label>
+          <input type="password" id="liPw" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn btn-accent">로그인</button>
+        <p class="login-error" id="loginError"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       관리자 패널
+       ========================================================= -->
+  <div id="panelView" class="hidden">
+    <div class="admin-wrap">
+
+      <div class="admin-top">
+        <h1>コタツ 관리자</h1>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <span class="who" id="whoami"></span>
+          <button type="button" class="btn btn-sm btn-ghost" id="logoutBtn">로그아웃</button>
+          <a class="btn btn-sm" href="index.html">사이트로 이동</a>
+        </div>
+      </div>
+
+      <!-- ---------- 사이트 설정 (정보 + 디자인) ---------- -->
+      <form id="settingsForm">
+
+        <div class="admin-section">
+          <h2>사이트 정보</h2>
+          <p class="hint">제목, 소개, 상단 바가 재생할 유튜브 재생목록을 설정해요.</p>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="setTitle">사이트 제목</label>
+              <input type="text" id="setTitle" placeholder="コタツ" />
+            </div>
+            <div class="field">
+              <label for="setSubtitle">부제목</label>
+              <input type="text" id="setSubtitle" placeholder="선택 사항" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="setPlaylist">유튜브 재생목록 (URL 또는 ID)</label>
+            <input type="text" id="setPlaylist" placeholder="https://www.youtube.com/playlist?list=... 또는 PL..." />
+          </div>
+        </div>
+
+        <div class="admin-section">
+          <h2>디자인</h2>
+          <p class="hint">배경 이미지·강조색부터 말풍선 색상까지, 사이트 전체 룩을 바꿀 수 있어요. 색상 필드는 비워두면 기존 기본값을 그대로 사용해요.</p>
+
+          <div class="field">
+            <label for="setBg">전역 배경 이미지 URL</label>
+            <input type="url" id="setBg" placeholder="비우면 각 곡의 앨범 커버를 사용" />
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="setAccent">강조색 (포인트 컬러)</label>
+              <div class="color-field">
+                <input type="color" id="setAccent" value="#7eb27b" />
+                <input type="text" id="setAccentHex" placeholder="#7eb27b" maxlength="7" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="setBgColorHex">페이지 배경색</label>
+              <div class="color-field">
+                <input type="color" id="setBgColor" value="#0b0b0d" />
+                <input type="text" id="setBgColorHex" placeholder="비우면 기본값" maxlength="7" />
+              </div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="setPanelColorHex">카드/패널 기본 배경색</label>
+              <div class="color-field">
+                <input type="color" id="setPanelColor" value="#1b1b1d" />
+                <input type="text" id="setPanelColorHex" placeholder="비우면 기본값" maxlength="7" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="setTextColorHex">기본 글자색</label>
+              <div class="color-field">
+                <input type="color" id="setTextColor" value="#f4f4f5" />
+                <input type="text" id="setTextColorHex" placeholder="비우면 기본값" maxlength="7" />
+              </div>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top: 22px;">
+            <label style="margin-bottom: 10px;">말풍선 색상</label>
+
+            <div class="field-row">
+              <div>
+                <p class="hint" style="margin:0 0 10px;">왼쪽 (상대 대사)</p>
+                <div class="field">
+                  <label for="setBubbleLBgHex">배경색</label>
+                  <div class="color-field">
+                    <input type="color" id="setBubbleLBg" value="#1b1b1d" />
+                    <input type="text" id="setBubbleLBgHex" placeholder="비우면 기본값" maxlength="7" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="setBubbleLTextHex">글자색</label>
+                  <div class="color-field">
+                    <input type="color" id="setBubbleLText" value="#7eb27b" />
+                    <input type="text" id="setBubbleLTextHex" placeholder="비우면 기본값" maxlength="7" />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p class="hint" style="margin:0 0 10px;">오른쪽 (내 대사)</p>
+                <div class="field">
+                  <label for="setBubbleRBgHex">배경색</label>
+                  <div class="color-field">
+                    <input type="color" id="setBubbleRBg" value="#1b1b1d" />
+                    <input type="text" id="setBubbleRBgHex" placeholder="비우면 기본값" maxlength="7" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="setBubbleRTextHex">글자색</label>
+                  <div class="color-field">
+                    <input type="color" id="setBubbleRText" value="#7eb27b" />
+                    <input type="text" id="setBubbleRTextHex" placeholder="비우면 기본값" maxlength="7" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:6px; padding:16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);">
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <span id="bubblePreviewLeft" style="align-self:flex-start; max-width:180px; padding:8px 13px; border-radius:12px; border-bottom-left-radius:2px; font-size:0.78rem;">예시 대사예요</span>
+                <span id="bubblePreviewRight" style="align-self:flex-end; max-width:180px; padding:8px 13px; border-radius:12px; border-bottom-right-radius:2px; font-size:0.78rem;">내 대사는 이렇게</span>
+              </div>
+              <button type="button" class="btn btn-sm btn-ghost" id="resetThemeBtn">색상 초기화</button>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top: 22px;">
+            <label for="setCss">커스텀 CSS (자유 편집, 선택)</label>
+            <textarea id="setCss" rows="6" placeholder="위 필드로 다루지 못하는 부분은 여기에 직접 CSS를 적어서 덮어쓸 수 있어요."></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-accent">설정 저장</button>
+        </div>
+      </form>
+
+      <!-- ---------- 곡 관리 ---------- -->
+      <div class="admin-section">
+        <h2>곡 목록 <span id="songCount">0곡</span></h2>
+        <p class="hint">순서는 ▲▼로 바꿀 수 있어요.</p>
+        <button type="button" class="btn btn-accent" id="newSongBtn" style="margin-bottom:16px;">+ 곡 추가</button>
+        <div id="songList"></div>
+      </div>
+
+      <!-- ---------- 곡 추가/수정 폼 ---------- -->
+      <div class="admin-section hidden" id="songFormCard">
+        <h2 id="songFormTitle">곡 추가</h2>
+        <form id="songForm">
+          <div class="field-row">
+            <div class="field">
+              <label for="fTitle">제목 *</label>
+              <input type="text" id="fTitle" required />
+            </div>
+            <div class="field">
+              <label for="fArtist">아티스트</label>
+              <input type="text" id="fArtist" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="fYoutube">유튜브 ID 또는 링크</label>
+            <input type="text" id="fYoutube" placeholder="영상 ID, watch?v=, youtu.be/, shorts/ 링크 모두 인식" />
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="fCover">앨범 커버 이미지 URL</label>
+              <input type="url" id="fCover" />
+            </div>
+            <div class="field">
+              <label for="fBg">카드 배경 이미지 URL (선택)</label>
+              <input type="url" id="fBg" placeholder="비우면 앨범 커버 사용" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="fAccent">이 곡 전용 강조색 (선택)</label>
+            <input type="text" id="fAccent" placeholder="#ff8a8a 처럼 입력 · 비우면 전역 강조색/말풍선 색상 사용" />
+          </div>
+
+          <div class="field">
+            <label for="fLyrics">가사 (원문/번역 자유롭게, 줄바꿈 그대로 표시)</label>
+            <textarea id="fLyrics" rows="8"></textarea>
+          </div>
+
+          <div class="field">
+            <label for="fQuote">인용구</label>
+            <textarea id="fQuote" rows="2"></textarea>
+          </div>
+
+          <div class="field">
+            <label for="fTrivia">하단 코멘트</label>
+            <textarea id="fTrivia" rows="2"></textarea>
+          </div>
+
+          <div class="field">
+            <label>말풍선 (롤플레이 대사)</label>
+            <div id="bubbleEditor" class="bubble-editor"></div>
+            <button type="button" class="btn btn-sm" id="addBubbleBtn">+ 말풍선 추가</button>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn" id="cancelSongBtn">취소</button>
+            <button type="submit" class="btn btn-accent">곡 저장</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ---------- 방명록 관리 ---------- -->
+      <div class="admin-section">
+        <h2>방명록 <span id="gbAdminCount">0개</span></h2>
+        <p class="hint">부적절한 글은 삭제할 수 있어요.</p>
+        <div id="gbAdminList"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
